@@ -1,0 +1,5 @@
+{
+  "name": "PharmaCare",
+  "description": "A complete Pharmacy Store Management System with modern UI, authentication, role-based access, and CRUD operations.",
+  "requestFramePermissions": []
+}

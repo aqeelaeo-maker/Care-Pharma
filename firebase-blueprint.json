@@ -1,0 +1,181 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the pharmacy system",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "Pharmacist", "Staff"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "A medicine or product in the pharmacy",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "genericName": { "type": "string" },
+        "category": { "type": "string" },
+        "batchNumber": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "purchasePrice": { "type": "number" },
+        "salePrice": { "type": "number" },
+        "quantity": { "type": "number" },
+        "manufacturer": { "type": "string" },
+        "barcode": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "genericName", "category", "batchNumber", "expiryDate", "purchasePrice", "salePrice", "quantity", "manufacturer", "createdAt", "updatedAt"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "A customer of the pharmacy",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "points": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "createdAt"]
+    },
+    "Vendor": {
+      "title": "Vendor",
+      "description": "A supplier of medicines",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contactInfo": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "contactInfo", "createdAt"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "A purchase order from a vendor",
+      "type": "object",
+      "properties": {
+        "vendorId": { "type": "string" },
+        "vendorName": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "productName": { "type": "string" },
+              "batchNumber": { "type": "string" },
+              "expiryDate": { "type": "string" },
+              "quantity": { "type": "number" },
+              "purchasePrice": { "type": "number" }
+            }
+          }
+        },
+        "date": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["vendorId", "vendorName", "totalAmount", "items", "date", "createdAt"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "A sale transaction",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "discount": { "type": "number" },
+        "tax": { "type": "number" },
+        "finalAmount": { "type": "number" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "productName": { "type": "string" },
+              "batchNumber": { "type": "string" },
+              "expiryDate": { "type": "string" },
+              "quantity": { "type": "number" },
+              "salePrice": { "type": "number" },
+              "total": { "type": "number" }
+            }
+          }
+        },
+        "date": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["totalAmount", "discount", "tax", "finalAmount", "items", "date", "createdBy", "createdAt"]
+    },
+    "StockLog": {
+      "title": "StockLog",
+      "description": "A log of stock changes",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "type": { "type": "string", "enum": ["IN", "OUT"] },
+        "quantity": { "type": "number" },
+        "referenceId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "productName", "type", "quantity", "referenceId", "date"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Store settings",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "taxRate": { "type": "number" },
+        "currency": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Users collection"
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Products collection"
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Customers collection"
+    },
+    "/vendors/{vendorId}": {
+      "schema": { "$ref": "#/entities/Vendor" },
+      "description": "Vendors collection"
+    },
+    "/purchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/Purchase" },
+      "description": "Purchases collection"
+    },
+    "/sales/{saleId}": {
+      "schema": { "$ref": "#/entities/Sale" },
+      "description": "Sales collection"
+    },
+    "/stockLogs/{logId}": {
+      "schema": { "$ref": "#/entities/StockLog" },
+      "description": "Stock logs collection"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/Settings" },
+      "description": "Settings collection"
+    }
+  }
+}
