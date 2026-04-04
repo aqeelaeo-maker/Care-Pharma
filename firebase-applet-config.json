@@ -1,10 +1,9 @@
 {
-  "projectId": "gen-lang-client-0955823459",
-  "appId": "1:556524087447:web:11f22f88155711453ca1d2",
-  "apiKey": "AIzaSyBg4u3dGES70TjaXLhh6idFjt8tKwNwFBM",
-  "authDomain": "gen-lang-client-0955823459.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-ad836ef9-f633-4e8e-ac04-8d5370eb4c5d",
-  "storageBucket": "gen-lang-client-0955823459.firebasestorage.app",
-  "messagingSenderId": "556524087447",
-  "measurementId": ""
+  "apiKey": "AIzaSyCW7IFSxY8nGLJziY96eVJYGxz_Zh4ci3Q",
+  "authDomain": "pharmacare-d8ece.firebaseapp.com",
+  "projectId": "pharmacare-d8ece",
+  "storageBucket": "pharmacare-d8ece.firebasestorage.app",
+  "messagingSenderId": "326424421119",
+  "appId": "1:326424421119:web:592beccba870d58ef922ca",
+  "measurementId": "G-JL0Y8LTN5D"
 }

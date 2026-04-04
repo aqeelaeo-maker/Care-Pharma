@@ -64,16 +64,17 @@ export default function Login() {
             <div className="p-4 bg-red-50 border border-red-200 rounded-md text-sm text-red-800 space-y-2 text-left">
               <div className="flex items-center font-bold text-red-900 mb-2">
                 <AlertCircle className="w-5 h-5 mr-2" />
-                Action Required in Firebase
+                Firebase Setup Required
               </div>
-              <p>Firebase is blocking the login because this URL is not authorized in your personal Firebase project.</p>
-              <p className="font-semibold mt-2">How to fix this right now:</p>
-              <ol className="list-decimal pl-5 space-y-1">
-                <li>Go to the <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" className="underline text-blue-600">Firebase Console</a>.</li>
-                <li>Open your <b>pharmacare-d8ece</b> project.</li>
-                <li>Click <b>Authentication</b> &gt; <b>Settings</b> tab &gt; <b>Authorized domains</b>.</li>
+              <p>To run this app on Vercel, you must connect it to your own Firebase project.</p>
+              <p className="font-semibold mt-2">Step-by-Step Guide:</p>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Go to the <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" className="underline text-blue-600">Firebase Console</a> and open your project.</li>
+                <li>Go to <b>Project Settings</b> (gear icon) and copy your Firebase config object.</li>
+                <li>In your GitHub repository, open <code>firebase-applet-config.json</code> and replace its contents with your config.</li>
+                <li>In Firebase Console, go to <b>Authentication</b> &gt; <b>Settings</b> tab &gt; <b>Authorized domains</b>.</li>
                 <li>Click <b>Add domain</b> and paste exactly: <br/><code className="bg-red-100 px-1 py-0.5 rounded select-all break-all">{window.location.hostname}</code></li>
-                <li>Wait 1-2 minutes, then try logging in again.</li>
+                <li>Wait for Vercel to rebuild your app, then try logging in again.</li>
               </ol>
             </div>
           )}
