@@ -18,37 +18,20 @@ export default function POS({ user }: { user: any }) {
   const [customerId, setCustomerId] = useState('');
   const [discount, setDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(0); // e.g., 5 for 5%
-  const [storeSettings, setStoreSettings] = useState({
-    storeName: 'PharmaCare',
-    address: '123 Health Street, City',
-    phone: '+1 234 567 890',
-    currency: 'USD'
-  });
   const [loading, setLoading] = useState(false);
   
-  const receiptRef = useRef(null);
+  const thermalReceiptRef = useRef(null);
+  const a4ReceiptRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsSnap, customersSnap, settingsSnap] = await Promise.all([
+        const [productsSnap, customersSnap] = await Promise.all([
           getDocs(collection(db, 'products')),
-          getDocs(collection(db, 'customers')),
-          getDoc(doc(db, 'settings', 'store'))
+          getDocs(collection(db, 'customers'))
         ]);
         setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setCustomers(customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        
-        if (settingsSnap.exists()) {
-          const settings = settingsSnap.data();
-          setTaxRate(settings.taxRate || 0);
-          setStoreSettings({
-            storeName: settings.storeName || 'PharmaCare',
-            address: settings.address || '123 Health Street, City',
-            phone: settings.phone || '+1 234 567 890',
-            currency: settings.currency || 'USD'
-          });
-        }
       } catch (error) {
         toast.error("Failed to load data");
       }
@@ -114,7 +97,10 @@ export default function POS({ user }: { user: any }) {
   const taxAmount = (subtotal * taxRate) / 100;
   const finalAmount = subtotal - discount + taxAmount;
 
-  const handleCheckout = async () => {
+  const selectedCustomer = customers.find(c => c.id === customerId);
+  const customerName = selectedCustomer?.name || 'Walk-in Customer';
+
+  const handleCheckout = async (printType: 'thermal' | 'a4') => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
       return;
@@ -123,8 +109,7 @@ export default function POS({ user }: { user: any }) {
     setLoading(true);
     try {
       const customer = customers.find(c => c.id === customerId);
-      const saleData = {
-        customerId: customer?.id || '',
+      const saleData: any = {
         customerName: customer?.name || 'Walk-in Customer',
         totalAmount: subtotal,
         discount,
@@ -135,6 +120,10 @@ export default function POS({ user }: { user: any }) {
         createdBy: user.uid,
         createdAt: new Date().toISOString()
       };
+      
+      if (customer?.id) {
+        saleData.customerId = customer.id;
+      }
 
       const batch = writeBatch(db);
       const saleRef = doc(collection(db, 'sales'));
@@ -167,17 +156,23 @@ export default function POS({ user }: { user: any }) {
       toast.success("Sale completed successfully");
       
       // Trigger print
-      handlePrint();
+      if (printType === 'thermal') {
+        handlePrintThermal();
+      } else {
+        handlePrintA4();
+      }
       
-      // Reset
-      setCart([]);
-      setCustomerId('');
-      setDiscount(0);
-      setSearch('');
-      
-      // Refresh products to get updated stock
-      const productsSnap = await getDocs(collection(db, 'products'));
-      setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      // Reset after a short delay to allow print capture
+      setTimeout(async () => {
+        setCart([]);
+        setCustomerId('');
+        setDiscount(0);
+        setSearch('');
+        
+        // Refresh products to get updated stock
+        const productsSnap = await getDocs(collection(db, 'products'));
+        setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, 500);
 
     } catch (error: any) {
       console.error("Checkout error:", error);
@@ -187,9 +182,8 @@ export default function POS({ user }: { user: any }) {
     }
   };
 
-  const handlePrint = useReactToPrint({
-    contentRef: receiptRef,
-  });
+  const handlePrintThermal = useReactToPrint({ contentRef: thermalReceiptRef });
+  const handlePrintA4 = useReactToPrint({ contentRef: a4ReceiptRef });
 
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-6">
@@ -305,23 +299,38 @@ export default function POS({ user }: { user: any }) {
 
         <Button 
           className="w-full h-12 text-lg" 
-          onClick={handleCheckout} 
+          onClick={() => handleCheckout('thermal')} 
           disabled={cart.length === 0 || loading}
         >
-          {loading ? 'Processing...' : 'Checkout & Print'}
+          <Printer className="w-4 h-4 mr-2" />
+          {loading ? 'Processing...' : 'Thermal Receipt'}
+        </Button>
+        <Button 
+          className="w-full h-12 text-lg mt-2" 
+          variant="secondary"
+          onClick={() => handleCheckout('a4')} 
+          disabled={cart.length === 0 || loading}
+        >
+          <Printer className="w-4 h-4 mr-2" />
+          {loading ? 'Processing...' : 'A4 Invoice'}
         </Button>
       </div>
 
-      {/* Hidden Receipt for Printing */}
+      {/* Hidden Receipts for Printing */}
       <div className="hidden">
-        <div ref={receiptRef} className="p-4 w-[80mm] text-sm font-mono">
+        {/* Thermal Receipt */}
+        <div ref={thermalReceiptRef} className="p-4 w-[80mm] text-sm font-mono bg-white text-black">
           <div className="text-center mb-4">
-            <h2 className="font-bold text-xl">{storeSettings.storeName}</h2>
-            <p>{storeSettings.address}</p>
-            <p>Tel: {storeSettings.phone}</p>
+            <h2 className="font-bold text-xl">PharmaCare</h2>
+            <p>123 Health Street, City</p>
+            <p>Tel: +1 234 567 890</p>
             <p>{new Date().toLocaleString()}</p>
           </div>
-          <div className="border-t border-b border-dashed py-2 mb-2">
+          <div className="mb-2 border-b border-dashed pb-2">
+            <p>Customer: {customerName}</p>
+            {selectedCustomer?.phone && <p>Tel: {selectedCustomer.phone}</p>}
+          </div>
+          <div className="border-b border-dashed py-2 mb-2">
             <div className="flex justify-between font-bold">
               <span>Item</span>
               <span>Total</span>
@@ -357,6 +366,80 @@ export default function POS({ user }: { user: any }) {
           <div className="text-center mt-6">
             <p>Thank you for your visit!</p>
             <p>Get well soon.</p>
+          </div>
+        </div>
+
+        {/* A4 Invoice */}
+        <div ref={a4ReceiptRef} className="p-10 w-[210mm] min-h-[297mm] bg-white text-black">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-blue-600 mb-2">PharmaCare</h1>
+              <p className="text-gray-600">123 Health Street, City</p>
+              <p className="text-gray-600">Tel: +1 234 567 890</p>
+              <p className="text-gray-600">Email: contact@pharmacare.com</p>
+            </div>
+            <div className="text-right">
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">INVOICE</h2>
+              <p className="text-gray-600">Date: {new Date().toLocaleDateString()}</p>
+              <p className="text-gray-600">Time: {new Date().toLocaleTimeString()}</p>
+            </div>
+          </div>
+          
+          <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-lg font-semibold border-b pb-2 mb-2">Bill To:</h3>
+            <p className="font-bold text-xl text-gray-800">{customerName}</p>
+            {selectedCustomer?.phone && <p className="text-gray-600 mt-1">Phone: {selectedCustomer.phone}</p>}
+            {selectedCustomer?.address && <p className="text-gray-600 mt-1">Address: {selectedCustomer.address}</p>}
+          </div>
+
+          <table className="w-full mb-8 border-collapse">
+            <thead>
+              <tr className="bg-gray-100 text-gray-700">
+                <th className="text-left py-3 px-4 font-semibold">Item Description</th>
+                <th className="text-center py-3 px-4 font-semibold">Qty</th>
+                <th className="text-right py-3 px-4 font-semibold">Unit Price</th>
+                <th className="text-right py-3 px-4 font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cart.map((item, i) => (
+                <tr key={i} className="border-b border-gray-200">
+                  <td className="py-3 px-4">
+                    <div className="font-medium text-gray-800">{item.productName}</div>
+                    <div className="text-sm text-gray-500">Batch: {item.batchNumber}</div>
+                  </td>
+                  <td className="text-center py-3 px-4">{item.quantity}</td>
+                  <td className="text-right py-3 px-4">${item.salePrice.toFixed(2)}</td>
+                  <td className="text-right py-3 px-4 font-medium">${item.total.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="flex justify-end">
+            <div className="w-72 space-y-3">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal:</span>
+                <span className="font-medium">${subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-red-600">
+                <span>Discount:</span>
+                <span className="font-medium">-${discount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Tax ({taxRate}%):</span>
+                <span className="font-medium">${taxAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-2xl font-bold border-t-2 border-gray-800 pt-3 mt-3">
+                <span>Total:</span>
+                <span className="text-blue-600">${finalAmount.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-20 pt-8 border-t border-gray-200 text-center text-gray-500">
+            <p className="font-medium text-gray-600 mb-1">Thank you for your business!</p>
+            <p className="text-sm">If you have any questions about this invoice, please contact us.</p>
           </div>
         </div>
       </div>
