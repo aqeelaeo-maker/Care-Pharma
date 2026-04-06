@@ -199,7 +199,7 @@ export default function POS({ user }: { user: any }) {
   const handlePrintA4 = useReactToPrint({ contentRef: a4ReceiptRef });
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] gap-6">
+    <div className="flex h-[calc(100vh-6rem)] gap-6">
       {/* Left Panel: Products & Search */}
       <div className="flex-1 flex flex-col bg-white p-4 rounded-md border shadow-sm">
         <div className="relative mb-4">
@@ -259,22 +259,22 @@ export default function POS({ user }: { user: any }) {
           {cart.length === 0 ? (
             <div className="h-full flex items-center justify-center text-gray-400">Cart is empty</div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {cart.map(item => (
-                <div key={item.productId} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{item.productName}</div>
+                <div key={item.productId} className="flex justify-between items-center bg-gray-50 p-2 rounded gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate" title={item.productName}>{item.productName}</div>
                     <div className="text-xs text-gray-500">{settings.currency}{item.salePrice.toFixed(2)}</div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 shrink-0">
                     <Input 
                       type="number" 
-                      className="w-16 h-8 text-center" 
+                      className="w-14 h-8 text-center px-1" 
                       value={item.quantity}
                       onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value))}
                     />
-                    <div className="font-medium w-16 text-right">{settings.currency}{item.total.toFixed(2)}</div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeFromCart(item.productId)}>
+                    <div className="font-medium w-14 text-right truncate">{settings.currency}{item.total.toFixed(2)}</div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 shrink-0" onClick={() => removeFromCart(item.productId)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -284,7 +284,7 @@ export default function POS({ user }: { user: any }) {
           )}
         </div>
 
-        <div className="space-y-3 mb-4">
+        <div className="space-y-1.5 mb-3 text-sm">
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Subtotal</span>
             <span className="font-medium">{settings.currency}{subtotal.toFixed(2)}</span>
@@ -293,7 +293,7 @@ export default function POS({ user }: { user: any }) {
             <span className="text-gray-600">Discount</span>
             <Input 
               type="number" 
-              className="w-24 h-8 text-right" 
+              className="w-20 h-7 text-right text-sm" 
               value={discount || ''}
               onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
             />
@@ -302,21 +302,21 @@ export default function POS({ user }: { user: any }) {
             <span className="text-gray-600">Tax ({settings.taxRate}%)</span>
             <span className="font-medium">{settings.currency}{taxAmount.toFixed(2)}</span>
           </div>
-          <div className="border-t pt-2 flex justify-between items-center text-lg font-bold">
+          <div className="border-t pt-1.5 flex justify-between items-center text-base font-bold">
             <span>Total</span>
             <span className="text-blue-600">{settings.currency}{finalAmount.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-center pt-2">
+          <div className="flex justify-between items-center pt-1.5">
             <span className="text-gray-600">Amount Paid</span>
             <Input 
               type="number" 
-              className="w-24 h-8 text-right border-green-300 focus-visible:ring-green-500" 
+              className="w-20 h-7 text-right text-sm border-green-300 focus-visible:ring-green-500" 
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value === '' ? '' : parseFloat(e.target.value))}
             />
           </div>
           {balance > 0 && (
-            <div className="flex justify-between items-center text-red-600 text-sm">
+            <div className="flex justify-between items-center text-red-600 text-xs">
               <span>Balance (Loan)</span>
               <span className="font-medium">{settings.currency}{balance.toFixed(2)}</span>
             </div>
@@ -324,7 +324,7 @@ export default function POS({ user }: { user: any }) {
         </div>
 
         <Button 
-          className="w-full h-12 text-lg" 
+          className="w-full h-10 text-base" 
           onClick={() => handleCheckout('thermal')} 
           disabled={cart.length === 0 || loading}
         >
@@ -332,7 +332,7 @@ export default function POS({ user }: { user: any }) {
           {loading ? 'Processing...' : 'Thermal Receipt'}
         </Button>
         <Button 
-          className="w-full h-12 text-lg mt-2" 
+          className="w-full h-10 text-base mt-2" 
           variant="secondary"
           onClick={() => handleCheckout('a4')} 
           disabled={cart.length === 0 || loading}
