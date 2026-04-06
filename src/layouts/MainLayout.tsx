@@ -31,6 +31,7 @@ export default function MainLayout({ user }: { user: any }) {
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'POS', href: '/pos', icon: ShoppingCart },
     { name: 'Products', href: '/products', icon: Package },
+    { name: 'Stock', href: '/stock', icon: Package },
     { name: 'Sales', href: '/sales', icon: Receipt },
     { name: 'Purchases', href: '/purchases', icon: ShoppingCart },
     { name: 'Customers', href: '/customers', icon: Users },

@@ -15,7 +15,7 @@ export default function Customers() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', points: 0 });
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', points: 0, loanAmount: 0 });
 
   const fetchCustomers = async () => {
     try {
@@ -62,7 +62,7 @@ export default function Customers() {
 
   const handleEdit = (customer: any) => {
     setEditingCustomer(customer);
-    setFormData({ name: customer.name, phone: customer.phone, address: customer.address || '', points: customer.points || 0 });
+    setFormData({ name: customer.name, phone: customer.phone, address: customer.address || '', points: customer.points || 0, loanAmount: customer.loanAmount || 0 });
     setIsDialogOpen(true);
   };
 
@@ -81,7 +81,7 @@ export default function Customers() {
 
   const openNewDialog = () => {
     setEditingCustomer(null);
-    setFormData({ name: '', phone: '', address: '', points: 0 });
+    setFormData({ name: '', phone: '', address: '', points: 0, loanAmount: 0 });
     setIsDialogOpen(true);
   };
 
@@ -119,6 +119,10 @@ export default function Customers() {
                 <Label htmlFor="points">Loyalty Points</Label>
                 <Input id="points" name="points" type="number" value={formData.points} onChange={handleInputChange} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="loanAmount">Loan Amount ($)</Label>
+                <Input id="loanAmount" name="loanAmount" type="number" value={formData.loanAmount} onChange={handleInputChange} />
+              </div>
               <div className="flex justify-end space-x-2 mt-4">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button type="submit">Save</Button>
@@ -148,14 +152,15 @@ export default function Customers() {
               <TableHead>Phone</TableHead>
               <TableHead>Address</TableHead>
               <TableHead>Points</TableHead>
+              <TableHead>Loan Amount</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
             ) : filteredCustomers.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center">No customers found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center">No customers found</TableCell></TableRow>
             ) : (
               filteredCustomers.map((customer) => (
                 <TableRow key={customer.id}>
@@ -163,6 +168,9 @@ export default function Customers() {
                   <TableCell>{customer.phone}</TableCell>
                   <TableCell>{customer.address}</TableCell>
                   <TableCell>{customer.points}</TableCell>
+                  <TableCell className={customer.loanAmount > 0 ? "text-red-600 font-medium" : ""}>
+                    ${(customer.loanAmount || 0).toFixed(2)}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(customer)}>
                       <Edit className="h-4 w-4 text-blue-600" />

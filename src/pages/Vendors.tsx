@@ -15,7 +15,7 @@ export default function Vendors() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: '', contactInfo: '', address: '' });
+  const [formData, setFormData] = useState({ name: '', contactInfo: '', address: '', pendingPayment: 0 });
 
   const fetchVendors = async () => {
     try {
@@ -35,8 +35,11 @@ export default function Vendors() {
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'number' ? parseFloat(value) || 0 : value 
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +62,7 @@ export default function Vendors() {
 
   const handleEdit = (vendor: any) => {
     setEditingVendor(vendor);
-    setFormData({ name: vendor.name, contactInfo: vendor.contactInfo, address: vendor.address || '' });
+    setFormData({ name: vendor.name, contactInfo: vendor.contactInfo, address: vendor.address || '', pendingPayment: vendor.pendingPayment || 0 });
     setIsDialogOpen(true);
   };
 
@@ -78,7 +81,7 @@ export default function Vendors() {
 
   const openNewDialog = () => {
     setEditingVendor(null);
-    setFormData({ name: '', contactInfo: '', address: '' });
+    setFormData({ name: '', contactInfo: '', address: '', pendingPayment: 0 });
     setIsDialogOpen(true);
   };
 
@@ -112,6 +115,10 @@ export default function Vendors() {
                 <Label htmlFor="address">Address</Label>
                 <Input id="address" name="address" value={formData.address} onChange={handleInputChange} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="pendingPayment">Pending Payment ($)</Label>
+                <Input id="pendingPayment" name="pendingPayment" type="number" value={formData.pendingPayment} onChange={handleInputChange} />
+              </div>
               <div className="flex justify-end space-x-2 mt-4">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button type="submit">Save</Button>
@@ -140,20 +147,24 @@ export default function Vendors() {
               <TableHead>Name</TableHead>
               <TableHead>Contact Info</TableHead>
               <TableHead>Address</TableHead>
+              <TableHead>Pending Payment</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
             ) : filteredVendors.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center">No vendors found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center">No vendors found</TableCell></TableRow>
             ) : (
               filteredVendors.map((vendor) => (
                 <TableRow key={vendor.id}>
                   <TableCell className="font-medium">{vendor.name}</TableCell>
                   <TableCell>{vendor.contactInfo}</TableCell>
                   <TableCell>{vendor.address}</TableCell>
+                  <TableCell className={vendor.pendingPayment > 0 ? "text-red-600 font-medium" : ""}>
+                    ${(vendor.pendingPayment || 0).toFixed(2)}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(vendor)}>
                       <Edit className="h-4 w-4 text-blue-600" />

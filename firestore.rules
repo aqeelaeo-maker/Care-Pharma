@@ -63,6 +63,7 @@ service cloud.firestore {
              data.phone is string && data.phone.size() <= 50 &&
              (!('address' in data) || (data.address is string && data.address.size() <= 500)) &&
              (!('points' in data) || (data.points is number && data.points >= 0)) &&
+             (!('loanAmount' in data) || (data.loanAmount is number && data.loanAmount >= 0)) &&
              data.createdAt is string;
     }
 
@@ -71,6 +72,7 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.contactInfo is string && data.contactInfo.size() <= 200 &&
              (!('address' in data) || (data.address is string && data.address.size() <= 500)) &&
+             (!('pendingPayment' in data) || (data.pendingPayment is number && data.pendingPayment >= 0)) &&
              data.createdAt is string;
     }
 
@@ -79,6 +81,8 @@ service cloud.firestore {
              data.vendorId is string && data.vendorId.size() > 0 &&
              data.vendorName is string && data.vendorName.size() > 0 &&
              data.totalAmount is number && data.totalAmount >= 0 &&
+             (!('amountPaid' in data) || (data.amountPaid is number && data.amountPaid >= 0)) &&
+             (!('paymentStatus' in data) || (data.paymentStatus is string)) &&
              data.items is list && data.items.size() > 0 && data.items.size() <= 100 &&
              data.date is string &&
              data.createdAt is string;
@@ -92,6 +96,8 @@ service cloud.firestore {
              data.discount is number && data.discount >= 0 &&
              data.tax is number && data.tax >= 0 &&
              data.finalAmount is number && data.finalAmount >= 0 &&
+             (!('amountPaid' in data) || (data.amountPaid is number && data.amountPaid >= 0)) &&
+             (!('paymentStatus' in data) || (data.paymentStatus is string)) &&
              data.items is list && data.items.size() > 0 && data.items.size() <= 100 &&
              data.date is string &&
              data.createdBy is string && data.createdBy.size() > 0 &&

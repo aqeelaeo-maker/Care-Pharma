@@ -13,6 +13,7 @@ import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
+import Stock from './pages/Stock';
 import Customers from './pages/Customers';
 import Vendors from './pages/Vendors';
 import Purchases from './pages/Purchases';
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/" element={user ? <MainLayout user={user} /> : <Navigate to="/login" />}>
           <Route index element={<Dashboard />} />
           <Route path="products" element={<Products />} />
+          <Route path="stock" element={<Stock />} />
           <Route path="customers" element={<Customers />} />
           <Route path="vendors" element={<Vendors />} />
           <Route path="purchases" element={<Purchases />} />

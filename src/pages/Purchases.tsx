@@ -21,6 +21,7 @@ export default function Purchases() {
     vendorId: '',
     vendorName: '',
     date: new Date().toISOString().split('T')[0],
+    amountPaid: '' as number | ''
   });
   
   const [purchaseItems, setPurchaseItems] = useState<any[]>([]);
@@ -86,8 +87,13 @@ export default function Purchases() {
 
     try {
       const totalAmount = purchaseItems.reduce((sum, item) => sum + (item.quantity * item.purchasePrice), 0);
+      const amountPaid = formData.amountPaid === '' ? 0 : formData.amountPaid;
+      const balance = totalAmount - amountPaid;
+      
       const purchaseData = {
         ...formData,
+        amountPaid,
+        paymentStatus: balance > 0 ? 'Partial' : 'Paid',
         totalAmount,
         items: purchaseItems,
         createdAt: new Date().toISOString()
@@ -98,6 +104,17 @@ export default function Purchases() {
       // Add purchase record
       const purchaseRef = doc(collection(db, 'purchases'));
       batch.set(purchaseRef, purchaseData);
+
+      // Update vendor pending payment
+      if (balance > 0 && formData.vendorId) {
+        const vendorRef = doc(db, 'vendors', formData.vendorId);
+        const vendorSnap = await getDoc(vendorRef);
+        if (vendorSnap.exists()) {
+          batch.update(vendorRef, {
+            pendingPayment: (vendorSnap.data().pendingPayment || 0) + balance
+          });
+        }
+      }
 
       // Update product quantities and add stock logs
       for (const item of purchaseItems) {
@@ -128,7 +145,7 @@ export default function Purchases() {
       toast.success("Purchase recorded successfully");
       setIsDialogOpen(false);
       setPurchaseItems([]);
-      setFormData({ ...formData, vendorId: '', vendorName: '' });
+      setFormData({ vendorId: '', vendorName: '', date: new Date().toISOString().split('T')[0], amountPaid: '' });
       fetchData();
     } catch (error: any) {
       console.error("Error saving purchase:", error);
@@ -209,9 +226,24 @@ export default function Purchases() {
                           <TableCell>${(item.quantity * item.purchasePrice).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-right font-bold">Total:</TableCell>
+                        <TableCell className="font-bold">
+                          ${purchaseItems.reduce((sum, item) => sum + (item.quantity * item.purchasePrice), 0).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
                     </TableBody>
                   </Table>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Amount Paid ($)</Label>
+                <Input 
+                  type="number" 
+                  value={formData.amountPaid} 
+                  onChange={e => setFormData({...formData, amountPaid: e.target.value === '' ? '' : parseFloat(e.target.value)})} 
+                />
               </div>
 
               <div className="flex justify-end space-x-2">
@@ -231,13 +263,15 @@ export default function Purchases() {
               <TableHead>Vendor</TableHead>
               <TableHead>Items</TableHead>
               <TableHead>Total Amount</TableHead>
+              <TableHead>Amount Paid</TableHead>
+              <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
             ) : purchases.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center">No purchases found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center">No purchases found</TableCell></TableRow>
             ) : (
               purchases.map((purchase) => (
                 <TableRow key={purchase.id}>
@@ -245,6 +279,14 @@ export default function Purchases() {
                   <TableCell>{purchase.vendorName}</TableCell>
                   <TableCell>{purchase.items.length} items</TableCell>
                   <TableCell>${purchase.totalAmount.toFixed(2)}</TableCell>
+                  <TableCell>${(purchase.amountPaid || 0).toFixed(2)}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      purchase.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {purchase.paymentStatus || 'Paid'}
+                    </span>
+                  </TableCell>
                 </TableRow>
               ))
             )}

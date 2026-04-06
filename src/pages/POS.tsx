@@ -14,6 +14,7 @@ export default function POS({ user }: { user: any }) {
   const [products, setProducts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [amountPaid, setAmountPaid] = useState<number | ''>('');
   const [cart, setCart] = useState<any[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [discount, setDiscount] = useState(0);
@@ -96,6 +97,7 @@ export default function POS({ user }: { user: any }) {
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
   const taxAmount = (subtotal * taxRate) / 100;
   const finalAmount = subtotal - discount + taxAmount;
+  const balance = finalAmount - (amountPaid === '' ? 0 : amountPaid);
 
   const selectedCustomer = customers.find(c => c.id === customerId);
   const customerName = selectedCustomer?.name || 'Walk-in Customer';
@@ -115,6 +117,8 @@ export default function POS({ user }: { user: any }) {
         discount,
         tax: taxAmount,
         finalAmount,
+        amountPaid: amountPaid === '' ? 0 : amountPaid,
+        paymentStatus: balance > 0 ? 'Partial' : 'Paid',
         items: cart,
         date: new Date().toISOString(),
         createdBy: user.uid,
@@ -123,6 +127,12 @@ export default function POS({ user }: { user: any }) {
       
       if (customer?.id) {
         saleData.customerId = customer.id;
+        if (balance > 0) {
+          const customerRef = doc(db, 'customers', customer.id);
+          batch.update(customerRef, {
+            loanAmount: (customer.loanAmount || 0) + balance
+          });
+        }
       }
 
       const batch = writeBatch(db);
@@ -167,6 +177,7 @@ export default function POS({ user }: { user: any }) {
         setCart([]);
         setCustomerId('');
         setDiscount(0);
+        setAmountPaid('');
         setSearch('');
         
         // Refresh products to get updated stock
@@ -295,6 +306,21 @@ export default function POS({ user }: { user: any }) {
             <span>Total</span>
             <span className="text-blue-600">${finalAmount.toFixed(2)}</span>
           </div>
+          <div className="flex justify-between items-center pt-2">
+            <span className="text-gray-600">Amount Paid</span>
+            <Input 
+              type="number" 
+              className="w-24 h-8 text-right border-green-300 focus-visible:ring-green-500" 
+              value={amountPaid}
+              onChange={(e) => setAmountPaid(e.target.value === '' ? '' : parseFloat(e.target.value))}
+            />
+          </div>
+          {balance > 0 && (
+            <div className="flex justify-between items-center text-red-600 text-sm">
+              <span>Balance (Loan)</span>
+              <span className="font-medium">${balance.toFixed(2)}</span>
+            </div>
+          )}
         </div>
 
         <Button 
