@@ -18,8 +18,7 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [formData, setFormData] = useState({
-    name: '', genericName: '', category: '', batchNumber: '', expiryDate: '',
-    purchasePrice: 0, salePrice: 0, quantity: 0, manufacturer: '', barcode: ''
+    name: '', genericName: '', category: '', manufacturer: ''
   });
 
   const fetchProducts = async () => {
@@ -59,8 +58,17 @@ export default function Products() {
         await updateDoc(doc(db, 'products', editingProduct.id), productData);
         toast.success("Product updated successfully");
       } else {
-        productData.createdAt = new Date().toISOString();
-        await addDoc(collection(db, 'products'), productData);
+        const newProductData = {
+          ...productData,
+          batchNumber: '',
+          expiryDate: '',
+          purchasePrice: 0,
+          salePrice: 0,
+          quantity: 0,
+          barcode: '',
+          createdAt: new Date().toISOString()
+        };
+        await addDoc(collection(db, 'products'), newProductData);
         toast.success("Product added successfully");
       }
       
@@ -76,9 +84,7 @@ export default function Products() {
     setEditingProduct(product);
     setFormData({
       name: product.name, genericName: product.genericName, category: product.category,
-      batchNumber: product.batchNumber, expiryDate: product.expiryDate,
-      purchasePrice: product.purchasePrice, salePrice: product.salePrice,
-      quantity: product.quantity, manufacturer: product.manufacturer, barcode: product.barcode || ''
+      manufacturer: product.manufacturer
     });
     setIsDialogOpen(true);
   };
@@ -99,15 +105,14 @@ export default function Products() {
   const openNewDialog = () => {
     setEditingProduct(null);
     setFormData({
-      name: '', genericName: '', category: '', batchNumber: '', expiryDate: '',
-      purchasePrice: 0, salePrice: 0, quantity: 0, manufacturer: '', barcode: ''
+      name: '', genericName: '', category: '', manufacturer: ''
     });
     setIsDialogOpen(true);
   };
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.batchNumber.toLowerCase().includes(search.toLowerCase())
+    p.category.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -136,32 +141,8 @@ export default function Products() {
                 <Input id="category" name="category" value={formData.category} onChange={handleInputChange} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="batchNumber">Batch Number *</Label>
-                <Input id="batchNumber" name="batchNumber" value={formData.batchNumber} onChange={handleInputChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="expiryDate">Expiry Date *</Label>
-                <Input id="expiryDate" name="expiryDate" type="date" value={formData.expiryDate} onChange={handleInputChange} required />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="manufacturer">Manufacturer *</Label>
                 <Input id="manufacturer" name="manufacturer" value={formData.manufacturer} onChange={handleInputChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="purchasePrice">Purchase Price *</Label>
-                <Input id="purchasePrice" name="purchasePrice" type="number" step="0.01" value={formData.purchasePrice} onChange={handleInputChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="salePrice">Sale Price *</Label>
-                <Input id="salePrice" name="salePrice" type="number" step="0.01" value={formData.salePrice} onChange={handleInputChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity *</Label>
-                <Input id="quantity" name="quantity" type="number" value={formData.quantity} onChange={handleInputChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="barcode">Barcode</Label>
-                <Input id="barcode" name="barcode" value={formData.barcode} onChange={handleInputChange} />
               </div>
               <div className="col-span-2 flex justify-end space-x-2 mt-4">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -189,37 +170,26 @@ export default function Products() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Batch</TableHead>
-              <TableHead>Expiry</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead>Generic Name</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Manufacturer</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
             ) : filteredProducts.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center">No products found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center">No products found</TableCell></TableRow>
             ) : (
               filteredProducts.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">
                     {product.name}
-                    <div className="text-xs text-gray-500">{product.genericName}</div>
                   </TableCell>
-                  <TableCell>{product.batchNumber}</TableCell>
-                  <TableCell>
-                    <span className={new Date(product.expiryDate) < new Date() ? 'text-red-600 font-bold' : ''}>
-                      {product.expiryDate}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className={product.quantity <= settings.minimumStockLimit ? 'text-yellow-600 font-bold' : ''}>
-                      {product.quantity}
-                    </span>
-                  </TableCell>
-                  <TableCell>{settings.currency}{product.salePrice.toFixed(2)}</TableCell>
+                  <TableCell>{product.genericName}</TableCell>
+                  <TableCell>{product.category}</TableCell>
+                  <TableCell>{product.manufacturer}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
                       <Edit className="h-4 w-4 text-blue-600" />

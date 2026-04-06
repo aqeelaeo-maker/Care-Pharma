@@ -199,7 +199,7 @@ export default function POS({ user }: { user: any }) {
   const handlePrintA4 = useReactToPrint({ contentRef: a4ReceiptRef });
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-6">
+    <div className="flex h-[calc(100vh-4rem)] gap-6">
       {/* Left Panel: Products & Search */}
       <div className="flex-1 flex flex-col bg-white p-4 rounded-md border shadow-sm">
         <div className="relative mb-4">
@@ -243,7 +243,7 @@ export default function POS({ user }: { user: any }) {
       </div>
 
       {/* Right Panel: Cart & Checkout */}
-      <div className="w-[400px] flex flex-col bg-white p-4 rounded-md border shadow-sm">
+      <div className="w-[350px] flex flex-col bg-white p-4 rounded-md border shadow-sm">
         <div className="mb-4">
           <Label>Customer</Label>
           <Select value={customerId} onValueChange={setCustomerId}>

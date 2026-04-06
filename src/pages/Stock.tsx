@@ -12,7 +12,14 @@ export default function Stock() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ purchasePrice: 0, salePrice: 0 });
+  const [editForm, setEditForm] = useState({ 
+    purchasePrice: 0, 
+    salePrice: 0,
+    batchNumber: '',
+    expiryDate: '',
+    quantity: 0,
+    barcode: ''
+  });
 
   useEffect(() => {
     fetchProducts();
@@ -38,7 +45,11 @@ export default function Stock() {
     setEditingId(product.id);
     setEditForm({
       purchasePrice: product.purchasePrice || 0,
-      salePrice: product.salePrice || 0
+      salePrice: product.salePrice || 0,
+      batchNumber: product.batchNumber || '',
+      expiryDate: product.expiryDate || '',
+      quantity: product.quantity || 0,
+      barcode: product.barcode || ''
     });
   };
 
@@ -48,9 +59,13 @@ export default function Stock() {
       await updateDoc(productRef, {
         purchasePrice: Number(editForm.purchasePrice),
         salePrice: Number(editForm.salePrice),
+        batchNumber: editForm.batchNumber,
+        expiryDate: editForm.expiryDate,
+        quantity: Number(editForm.quantity),
+        barcode: editForm.barcode,
         updatedAt: new Date().toISOString()
       });
-      toast.success("Prices updated successfully");
+      toast.success("Stock details updated successfully");
       setEditingId(null);
       fetchProducts();
     } catch (error) {
@@ -73,6 +88,8 @@ export default function Stock() {
             <TableRow>
               <TableHead>Product Name</TableHead>
               <TableHead>Batch</TableHead>
+              <TableHead>Expiry</TableHead>
+              <TableHead>Barcode</TableHead>
               <TableHead>Current Stock</TableHead>
               <TableHead>Cost Price</TableHead>
               <TableHead>Sale Price</TableHead>
@@ -83,13 +100,55 @@ export default function Stock() {
             {products.map((product) => (
               <TableRow key={product.id}>
                 <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{product.batchNumber}</TableCell>
                 <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    product.quantity <= settings.minimumStockLimit ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                  }`}>
-                    {product.quantity}
-                  </span>
+                  {editingId === product.id ? (
+                    <Input 
+                      value={editForm.batchNumber} 
+                      onChange={(e) => setEditForm({...editForm, batchNumber: e.target.value})}
+                      className="w-24"
+                    />
+                  ) : (
+                    product.batchNumber
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editingId === product.id ? (
+                    <Input 
+                      type="date"
+                      value={editForm.expiryDate} 
+                      onChange={(e) => setEditForm({...editForm, expiryDate: e.target.value})}
+                      className="w-36"
+                    />
+                  ) : (
+                    product.expiryDate
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editingId === product.id ? (
+                    <Input 
+                      value={editForm.barcode} 
+                      onChange={(e) => setEditForm({...editForm, barcode: e.target.value})}
+                      className="w-32"
+                    />
+                  ) : (
+                    product.barcode
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editingId === product.id ? (
+                    <Input 
+                      type="number" 
+                      value={editForm.quantity} 
+                      onChange={(e) => setEditForm({...editForm, quantity: parseInt(e.target.value) || 0})}
+                      className="w-24"
+                    />
+                  ) : (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      product.quantity <= settings.minimumStockLimit ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {product.quantity}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>
                   {editingId === product.id ? (
@@ -122,14 +181,14 @@ export default function Stock() {
                       <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>Cancel</Button>
                     </div>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => handleEdit(product)}>Edit Prices</Button>
+                    <Button size="sm" variant="outline" onClick={() => handleEdit(product)}>Edit Details</Button>
                   )}
                 </TableCell>
               </TableRow>
             ))}
             {products.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-4 text-gray-500">
                   No products found
                 </TableCell>
               </TableRow>
