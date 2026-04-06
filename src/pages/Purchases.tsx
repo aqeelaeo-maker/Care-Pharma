@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Search } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function Purchases() {
+  const settings = useSettings();
   const [purchases, setPurchases] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -222,14 +224,14 @@ export default function Purchases() {
                         <TableRow key={idx}>
                           <TableCell>{item.productName}</TableCell>
                           <TableCell>{item.quantity}</TableCell>
-                          <TableCell>${item.purchasePrice.toFixed(2)}</TableCell>
-                          <TableCell>${(item.quantity * item.purchasePrice).toFixed(2)}</TableCell>
+                          <TableCell>{settings.currency}{item.purchasePrice.toFixed(2)}</TableCell>
+                          <TableCell>{settings.currency}{(item.quantity * item.purchasePrice).toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                       <TableRow>
                         <TableCell colSpan={3} className="text-right font-bold">Total:</TableCell>
                         <TableCell className="font-bold">
-                          ${purchaseItems.reduce((sum, item) => sum + (item.quantity * item.purchasePrice), 0).toFixed(2)}
+                          {settings.currency}{purchaseItems.reduce((sum, item) => sum + (item.quantity * item.purchasePrice), 0).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -238,7 +240,7 @@ export default function Purchases() {
               </div>
 
               <div className="space-y-2">
-                <Label>Amount Paid ($)</Label>
+                <Label>Amount Paid ({settings.currency})</Label>
                 <Input 
                   type="number" 
                   value={formData.amountPaid} 
@@ -278,8 +280,8 @@ export default function Purchases() {
                   <TableCell>{new Date(purchase.date).toLocaleDateString()}</TableCell>
                   <TableCell>{purchase.vendorName}</TableCell>
                   <TableCell>{purchase.items.length} items</TableCell>
-                  <TableCell>${purchase.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell>${(purchase.amountPaid || 0).toFixed(2)}</TableCell>
+                  <TableCell>{settings.currency}{purchase.totalAmount.toFixed(2)}</TableCell>
+                  <TableCell>{settings.currency}{(purchase.amountPaid || 0).toFixed(2)}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       purchase.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'

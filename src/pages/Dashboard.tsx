@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, DollarSign, AlertTriangle, TrendingUp, Users, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function Dashboard() {
+  const settings = useSettings();
   const [stats, setStats] = useState({
     totalProducts: 0,
     salesToday: 0,
@@ -26,7 +28,7 @@ export default function Dashboard() {
       try {
         // Fetch products
         const productsSnap = await getDocs(collection(db, 'products'));
-        const productsData = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const productsData: any[] = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProducts(productsData);
         
         const totalProducts = productsData.length;
@@ -40,7 +42,7 @@ export default function Dashboard() {
           const expDate = new Date(p.expiryDate);
           return expDate >= today && expDate <= thirtyDaysFromNow;
         }).length;
-        const lowStock = productsData.filter(p => p.quantity > 0 && p.quantity <= 10).length;
+        const lowStock = productsData.filter(p => p.quantity > 0 && p.quantity <= settings.minimumStockLimit).length;
 
         // Fetch today's sales
         const todayStr = today.toISOString().split('T')[0];
@@ -104,7 +106,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.salesToday.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{settings.currency}{stats.salesToday.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -114,7 +116,7 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">${stats.totalCustomerLoan.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-red-600">{settings.currency}{stats.totalCustomerLoan.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -124,7 +126,7 @@ export default function Dashboard() {
             <Truck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">${stats.totalVendorPending.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-orange-600">{settings.currency}{stats.totalVendorPending.toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -155,7 +157,7 @@ export default function Dashboard() {
       <Dialog open={showLowStock} onOpenChange={setShowLowStock}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Low Stock Products (≤ 10)</DialogTitle>
+            <DialogTitle>Low Stock Products (≤ {settings.minimumStockLimit})</DialogTitle>
           </DialogHeader>
           <Table>
             <TableHeader>
@@ -166,7 +168,7 @@ export default function Dashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.filter(p => p.quantity > 0 && p.quantity <= 10).map(product => (
+              {products.filter(p => p.quantity > 0 && p.quantity <= settings.minimumStockLimit).map(product => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.batchNumber}</TableCell>

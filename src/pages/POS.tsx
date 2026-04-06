@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Search, Trash2, Printer } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function POS({ user }: { user: any }) {
+  const settings = useSettings();
   const [products, setProducts] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -18,7 +20,6 @@ export default function POS({ user }: { user: any }) {
   const [cart, setCart] = useState<any[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [discount, setDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(0); // e.g., 5 for 5%
   const [loading, setLoading] = useState(false);
   
   const thermalReceiptRef = useRef(null);
@@ -95,7 +96,7 @@ export default function POS({ user }: { user: any }) {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
-  const taxAmount = (subtotal * taxRate) / 100;
+  const taxAmount = (subtotal * settings.taxRate) / 100;
   const finalAmount = subtotal - discount + taxAmount;
   const balance = finalAmount - (amountPaid === '' ? 0 : amountPaid);
 
@@ -111,6 +112,9 @@ export default function POS({ user }: { user: any }) {
     setLoading(true);
     try {
       const customer = customers.find(c => c.id === customerId);
+      const batch = writeBatch(db);
+      const saleRef = doc(collection(db, 'sales'));
+
       const saleData: any = {
         customerName: customer?.name || 'Walk-in Customer',
         totalAmount: subtotal,
@@ -135,8 +139,6 @@ export default function POS({ user }: { user: any }) {
         }
       }
 
-      const batch = writeBatch(db);
-      const saleRef = doc(collection(db, 'sales'));
       batch.set(saleRef, saleData);
 
       // Update stock and logs
@@ -211,35 +213,33 @@ export default function POS({ user }: { user: any }) {
           />
         </div>
         
-        {search && (
-          <div className="flex-1 overflow-y-auto border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead></TableHead>
+        <div className="flex-1 overflow-y-auto border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.map(product => (
+                <TableRow key={product.id} className="cursor-pointer hover:bg-gray-50" onClick={() => addToCart(product)}>
+                  <TableCell>
+                    <div className="font-medium">{product.name}</div>
+                    <div className="text-xs text-gray-500">Batch: {product.batchNumber} | Exp: {product.expiryDate}</div>
+                  </TableCell>
+                  <TableCell>{product.quantity}</TableCell>
+                  <TableCell>{settings.currency}{product.salePrice.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="secondary">Add</Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map(product => (
-                  <TableRow key={product.id} className="cursor-pointer hover:bg-gray-50" onClick={() => addToCart(product)}>
-                    <TableCell>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-xs text-gray-500">Batch: {product.batchNumber} | Exp: {product.expiryDate}</div>
-                    </TableCell>
-                    <TableCell>{product.quantity}</TableCell>
-                    <TableCell>${product.salePrice.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="secondary">Add</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Right Panel: Cart & Checkout */}
@@ -264,7 +264,7 @@ export default function POS({ user }: { user: any }) {
                 <div key={item.productId} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                   <div className="flex-1">
                     <div className="font-medium text-sm">{item.productName}</div>
-                    <div className="text-xs text-gray-500">${item.salePrice.toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">{settings.currency}{item.salePrice.toFixed(2)}</div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Input 
@@ -273,7 +273,7 @@ export default function POS({ user }: { user: any }) {
                       value={item.quantity}
                       onChange={(e) => updateQuantity(item.productId, parseInt(e.target.value))}
                     />
-                    <div className="font-medium w-16 text-right">${item.total.toFixed(2)}</div>
+                    <div className="font-medium w-16 text-right">{settings.currency}{item.total.toFixed(2)}</div>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => removeFromCart(item.productId)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -287,7 +287,7 @@ export default function POS({ user }: { user: any }) {
         <div className="space-y-3 mb-4">
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Subtotal</span>
-            <span className="font-medium">${subtotal.toFixed(2)}</span>
+            <span className="font-medium">{settings.currency}{subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Discount</span>
@@ -299,12 +299,12 @@ export default function POS({ user }: { user: any }) {
             />
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-gray-600">Tax ({taxRate}%)</span>
-            <span className="font-medium">${taxAmount.toFixed(2)}</span>
+            <span className="text-gray-600">Tax ({settings.taxRate}%)</span>
+            <span className="font-medium">{settings.currency}{taxAmount.toFixed(2)}</span>
           </div>
           <div className="border-t pt-2 flex justify-between items-center text-lg font-bold">
             <span>Total</span>
-            <span className="text-blue-600">${finalAmount.toFixed(2)}</span>
+            <span className="text-blue-600">{settings.currency}{finalAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center pt-2">
             <span className="text-gray-600">Amount Paid</span>
@@ -318,7 +318,7 @@ export default function POS({ user }: { user: any }) {
           {balance > 0 && (
             <div className="flex justify-between items-center text-red-600 text-sm">
               <span>Balance (Loan)</span>
-              <span className="font-medium">${balance.toFixed(2)}</span>
+              <span className="font-medium">{settings.currency}{balance.toFixed(2)}</span>
             </div>
           )}
         </div>
@@ -347,9 +347,9 @@ export default function POS({ user }: { user: any }) {
         {/* Thermal Receipt */}
         <div ref={thermalReceiptRef} className="p-4 w-[80mm] text-sm font-mono bg-white text-black">
           <div className="text-center mb-4">
-            <h2 className="font-bold text-xl">PharmaCare</h2>
-            <p>123 Health Street, City</p>
-            <p>Tel: +1 234 567 890</p>
+            <h2 className="font-bold text-xl">{settings.storeName}</h2>
+            <p>{settings.address}</p>
+            <p>Tel: {settings.phone}</p>
             <p>{new Date().toLocaleString()}</p>
           </div>
           <div className="mb-2 border-b border-dashed pb-2">
@@ -366,27 +366,27 @@ export default function POS({ user }: { user: any }) {
             <div key={i} className="mb-2">
               <div>{item.productName}</div>
               <div className="flex justify-between text-xs">
-                <span>{item.quantity} x ${item.salePrice.toFixed(2)}</span>
-                <span>${item.total.toFixed(2)}</span>
+                <span>{item.quantity} x {settings.currency}{item.salePrice.toFixed(2)}</span>
+                <span>{settings.currency}{item.total.toFixed(2)}</span>
               </div>
             </div>
           ))}
           <div className="border-t border-dashed pt-2 mt-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>{settings.currency}{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Discount:</span>
-              <span>${discount.toFixed(2)}</span>
+              <span>{settings.currency}{discount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Tax:</span>
-              <span>${taxAmount.toFixed(2)}</span>
+              <span>Tax ({settings.taxRate}%):</span>
+              <span>{settings.currency}{taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg mt-2">
               <span>Total:</span>
-              <span>${finalAmount.toFixed(2)}</span>
+              <span>{settings.currency}{finalAmount.toFixed(2)}</span>
             </div>
           </div>
           <div className="text-center mt-6">
@@ -399,10 +399,9 @@ export default function POS({ user }: { user: any }) {
         <div ref={a4ReceiptRef} className="p-10 w-[210mm] min-h-[297mm] bg-white text-black">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-blue-600 mb-2">PharmaCare</h1>
-              <p className="text-gray-600">123 Health Street, City</p>
-              <p className="text-gray-600">Tel: +1 234 567 890</p>
-              <p className="text-gray-600">Email: contact@pharmacare.com</p>
+              <h1 className="text-4xl font-bold text-blue-600 mb-2">{settings.storeName}</h1>
+              <p className="text-gray-600">{settings.address}</p>
+              <p className="text-gray-600">Tel: {settings.phone}</p>
             </div>
             <div className="text-right">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">INVOICE</h2>
@@ -435,8 +434,8 @@ export default function POS({ user }: { user: any }) {
                     <div className="text-sm text-gray-500">Batch: {item.batchNumber}</div>
                   </td>
                   <td className="text-center py-3 px-4">{item.quantity}</td>
-                  <td className="text-right py-3 px-4">${item.salePrice.toFixed(2)}</td>
-                  <td className="text-right py-3 px-4 font-medium">${item.total.toFixed(2)}</td>
+                  <td className="text-right py-3 px-4">{settings.currency}{item.salePrice.toFixed(2)}</td>
+                  <td className="text-right py-3 px-4 font-medium">{settings.currency}{item.total.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -446,19 +445,19 @@ export default function POS({ user }: { user: any }) {
             <div className="w-72 space-y-3">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal:</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">{settings.currency}{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-red-600">
                 <span>Discount:</span>
-                <span className="font-medium">-${discount.toFixed(2)}</span>
+                <span className="font-medium">-{settings.currency}{discount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Tax ({taxRate}%):</span>
-                <span className="font-medium">${taxAmount.toFixed(2)}</span>
+                <span>Tax ({settings.taxRate}%):</span>
+                <span className="font-medium">{settings.currency}{taxAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-2xl font-bold border-t-2 border-gray-800 pt-3 mt-3">
                 <span>Total:</span>
-                <span className="text-blue-600">${finalAmount.toFixed(2)}</span>
+                <span className="text-blue-600">{settings.currency}{finalAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>

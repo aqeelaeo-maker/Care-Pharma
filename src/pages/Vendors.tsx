@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function Vendors() {
+  const settings = useSettings();
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -116,7 +118,7 @@ export default function Vendors() {
                 <Input id="address" name="address" value={formData.address} onChange={handleInputChange} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pendingPayment">Pending Payment ($)</Label>
+                <Label htmlFor="pendingPayment">Pending Payment ({settings.currency})</Label>
                 <Input id="pendingPayment" name="pendingPayment" type="number" value={formData.pendingPayment} onChange={handleInputChange} />
               </div>
               <div className="flex justify-end space-x-2 mt-4">
@@ -163,7 +165,7 @@ export default function Vendors() {
                   <TableCell>{vendor.contactInfo}</TableCell>
                   <TableCell>{vendor.address}</TableCell>
                   <TableCell className={vendor.pendingPayment > 0 ? "text-red-600 font-medium" : ""}>
-                    ${(vendor.pendingPayment || 0).toFixed(2)}
+                    {settings.currency}{(vendor.pendingPayment || 0).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(vendor)}>

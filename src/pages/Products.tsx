@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function Products() {
+  const settings = useSettings();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -213,11 +215,11 @@ export default function Products() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className={product.quantity < 10 ? 'text-yellow-600 font-bold' : ''}>
+                    <span className={product.quantity <= settings.minimumStockLimit ? 'text-yellow-600 font-bold' : ''}>
                       {product.quantity}
                     </span>
                   </TableCell>
-                  <TableCell>${product.salePrice.toFixed(2)}</TableCell>
+                  <TableCell>{settings.currency}{product.salePrice.toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
                       <Edit className="h-4 w-4 text-blue-600" />

@@ -17,7 +17,8 @@ export default function Settings() {
     address: '123 Health Street, City',
     phone: '+1 234 567 890',
     taxRate: 5,
-    currency: 'USD'
+    currency: '$',
+    minimumStockLimit: 10
   });
 
   useEffect(() => {
@@ -95,6 +96,10 @@ export default function Settings() {
             <div className="space-y-2">
               <Label>Currency</Label>
               <Input name="currency" value={storeSettings.currency} onChange={handleStoreSettingsChange} />
+            </div>
+            <div className="space-y-2">
+              <Label>Minimum Stock Limit</Label>
+              <Input name="minimumStockLimit" type="number" value={storeSettings.minimumStockLimit} onChange={handleStoreSettingsChange} />
             </div>
             <div className="col-span-2 flex justify-end mt-4">
               <Button onClick={saveStoreSettings}>Save Settings</Button>

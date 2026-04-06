@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function Customers() {
+  const settings = useSettings();
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -120,7 +122,7 @@ export default function Customers() {
                 <Input id="points" name="points" type="number" value={formData.points} onChange={handleInputChange} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="loanAmount">Loan Amount ($)</Label>
+                <Label htmlFor="loanAmount">Loan Amount ({settings.currency})</Label>
                 <Input id="loanAmount" name="loanAmount" type="number" value={formData.loanAmount} onChange={handleInputChange} />
               </div>
               <div className="flex justify-end space-x-2 mt-4">
@@ -169,7 +171,7 @@ export default function Customers() {
                   <TableCell>{customer.address}</TableCell>
                   <TableCell>{customer.points}</TableCell>
                   <TableCell className={customer.loanAmount > 0 ? "text-red-600 font-medium" : ""}>
-                    ${(customer.loanAmount || 0).toFixed(2)}
+                    {settings.currency}{(customer.loanAmount || 0).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(customer)}>

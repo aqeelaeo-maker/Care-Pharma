@@ -6,8 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format, subDays, parseISO } from 'date-fns';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function Reports() {
+  const settings = useSettings();
   const [sales, setSales] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -47,7 +49,7 @@ export default function Reports() {
   });
 
   const expiredProducts = products.filter(p => new Date(p.expiryDate) < new Date());
-  const lowStockProducts = products.filter(p => p.quantity < 10);
+  const lowStockProducts = products.filter(p => p.quantity > 0 && p.quantity <= settings.minimumStockLimit);
 
   if (loading) return <div>Loading reports...</div>;
 
@@ -73,9 +75,9 @@ export default function Reports() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip formatter={(value: number) => [`${settings.currency}${value.toFixed(2)}`, 'Sales']} />
                   <Legend />
-                  <Bar dataKey="sales" fill="#3b82f6" name="Sales ($)" />
+                  <Bar dataKey="sales" fill="#3b82f6" name={`Sales (${settings.currency})`} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -116,7 +118,7 @@ export default function Reports() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-yellow-600">Low Stock Products (Below 10)</CardTitle>
+              <CardTitle className="text-yellow-600">Low Stock Products (≤ {settings.minimumStockLimit})</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -153,16 +155,16 @@ export default function Reports() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <div className="text-sm text-blue-600 font-medium">Total Sales Revenue</div>
-                  <div className="text-2xl font-bold">${sales.reduce((sum, s) => sum + s.finalAmount, 0).toFixed(2)}</div>
+                  <div className="text-2xl font-bold">{settings.currency}{sales.reduce((sum, s) => sum + s.finalAmount, 0).toFixed(2)}</div>
                 </div>
                 <div className="p-4 bg-red-50 rounded-lg">
                   <div className="text-sm text-red-600 font-medium">Total Purchase Cost</div>
-                  <div className="text-2xl font-bold">${purchases.reduce((sum, p) => sum + p.totalAmount, 0).toFixed(2)}</div>
+                  <div className="text-2xl font-bold">{settings.currency}{purchases.reduce((sum, p) => sum + p.totalAmount, 0).toFixed(2)}</div>
                 </div>
                 <div className="p-4 bg-green-50 rounded-lg">
                   <div className="text-sm text-green-600 font-medium">Gross Profit</div>
                   <div className="text-2xl font-bold">
-                    ${(sales.reduce((sum, s) => sum + s.finalAmount, 0) - purchases.reduce((sum, p) => sum + p.totalAmount, 0)).toFixed(2)}
+                    {settings.currency}{(sales.reduce((sum, s) => sum + s.finalAmount, 0) - purchases.reduce((sum, p) => sum + p.totalAmount, 0)).toFixed(2)}
                   </div>
                 </div>
               </div>

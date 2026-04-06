@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function Stock() {
+  const settings = useSettings();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,7 +86,7 @@ export default function Stock() {
                 <TableCell>{product.batchNumber}</TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    product.quantity <= 10 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    product.quantity <= settings.minimumStockLimit ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                   }`}>
                     {product.quantity}
                   </span>
@@ -98,7 +100,7 @@ export default function Stock() {
                       className="w-24"
                     />
                   ) : (
-                    `$${(product.purchasePrice || 0).toFixed(2)}`
+                    `${settings.currency}${(product.purchasePrice || 0).toFixed(2)}`
                   )}
                 </TableCell>
                 <TableCell>
@@ -110,7 +112,7 @@ export default function Stock() {
                       className="w-24"
                     />
                   ) : (
-                    `$${(product.salePrice || 0).toFixed(2)}`
+                    `${settings.currency}${(product.salePrice || 0).toFixed(2)}`
                   )}
                 </TableCell>
                 <TableCell className="text-right">
