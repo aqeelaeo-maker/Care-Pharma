@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { useSettings } from '../contexts/SettingsContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Plus } from 'lucide-react';
 
 export default function Stock() {
   const settings = useSettings();
@@ -19,6 +23,17 @@ export default function Stock() {
     expiryDate: '',
     quantity: 0,
     barcode: ''
+  });
+
+  const [isAddStockOpen, setIsAddStockOpen] = useState(false);
+  const [addStockForm, setAddStockForm] = useState({
+    productId: '',
+    quantityToAdd: 0,
+    batchNumber: '',
+    expiryDate: '',
+    barcode: '',
+    purchasePrice: 0,
+    salePrice: 0
   });
 
   useEffect(() => {
@@ -38,6 +53,61 @@ export default function Stock() {
       toast.error("Failed to load products");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProductSelect = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setAddStockForm({
+        productId,
+        quantityToAdd: 0,
+        batchNumber: product.batchNumber || '',
+        expiryDate: product.expiryDate || '',
+        barcode: product.barcode || '',
+        purchasePrice: product.purchasePrice || 0,
+        salePrice: product.salePrice || 0
+      });
+    }
+  };
+
+  const handleAddStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addStockForm.productId) {
+      toast.error("Please select a product");
+      return;
+    }
+    try {
+      const product = products.find(p => p.id === addStockForm.productId);
+      const productRef = doc(db, 'products', addStockForm.productId);
+      
+      const newQuantity = (product.quantity || 0) + Number(addStockForm.quantityToAdd);
+
+      await updateDoc(productRef, {
+        quantity: newQuantity,
+        batchNumber: addStockForm.batchNumber,
+        expiryDate: addStockForm.expiryDate,
+        barcode: addStockForm.barcode,
+        purchasePrice: Number(addStockForm.purchasePrice),
+        salePrice: Number(addStockForm.salePrice),
+        updatedAt: new Date().toISOString()
+      });
+      
+      toast.success("Stock added successfully");
+      setIsAddStockOpen(false);
+      setAddStockForm({
+        productId: '',
+        quantityToAdd: 0,
+        batchNumber: '',
+        expiryDate: '',
+        barcode: '',
+        purchasePrice: 0,
+        salePrice: 0
+      });
+      fetchProducts();
+    } catch (error) {
+      console.error("Error adding stock:", error);
+      toast.error("Failed to add stock");
     }
   };
 
@@ -80,6 +150,103 @@ export default function Stock() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Stock & Pricing</h1>
+        <Dialog open={isAddStockOpen} onOpenChange={setIsAddStockOpen}>
+          <DialogTrigger render={
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Add Stock
+            </Button>
+          } />
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add Stock</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddStockSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Select Product *</Label>
+                <Select value={addStockForm.productId} onValueChange={handleProductSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {addStockForm.productId && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Quantity to Add *</Label>
+                      <Input 
+                        type="number" 
+                        required 
+                        min="1"
+                        value={addStockForm.quantityToAdd || ''} 
+                        onChange={e => setAddStockForm({...addStockForm, quantityToAdd: parseInt(e.target.value) || 0})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Barcode</Label>
+                      <Input 
+                        value={addStockForm.barcode} 
+                        onChange={e => setAddStockForm({...addStockForm, barcode: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Batch Number</Label>
+                      <Input 
+                        value={addStockForm.batchNumber} 
+                        onChange={e => setAddStockForm({...addStockForm, batchNumber: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Expiry Date</Label>
+                      <Input 
+                        type="date" 
+                        value={addStockForm.expiryDate} 
+                        onChange={e => setAddStockForm({...addStockForm, expiryDate: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Cost Price *</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        required 
+                        value={addStockForm.purchasePrice} 
+                        onChange={e => setAddStockForm({...addStockForm, purchasePrice: parseFloat(e.target.value) || 0})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Sale Price *</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        required 
+                        value={addStockForm.salePrice} 
+                        onChange={e => setAddStockForm({...addStockForm, salePrice: parseFloat(e.target.value) || 0})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsAddStockOpen(false)}>Cancel</Button>
+                    <Button type="submit">Save Stock</Button>
+                  </div>
+                </>
+              )}
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
