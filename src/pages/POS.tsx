@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, getDocs, doc, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,6 +103,8 @@ export default function POS({ user }: { user: any }) {
   const selectedCustomer = customers.find(c => c.id === customerId);
   const customerName = selectedCustomer?.name || 'Walk-in Customer';
 
+  const [lastInvoiceNumber, setLastInvoiceNumber] = useState('');
+
   const handleCheckout = async (printType: 'thermal' | 'a4') => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
@@ -111,11 +113,39 @@ export default function POS({ user }: { user: any }) {
 
     setLoading(true);
     try {
+      const today = new Date();
+      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const yy = String(today.getFullYear()).slice(-2);
+      const datePrefix = `${dd}${mm}${yy}`;
+      
+      let newInvoiceNumber = `${datePrefix}0001`; // fallback
+      
+      // We will try to find the latest invoice for today to determine the next sequence number
+      try {
+        const salesQuery = query(collection(db, 'sales'), orderBy('date', 'desc'), limit(10));
+        const salesSnap = await getDocs(salesQuery);
+        let maxSeq = 0;
+        salesSnap.forEach((dsnap) => {
+          const invNum = dsnap.data()?.invoiceNumber;
+          if (invNum && typeof invNum === 'string' && invNum.startsWith(datePrefix)) {
+            const seq = parseInt(invNum.slice(6));
+            if (!isNaN(seq) && seq > maxSeq) {
+              maxSeq = seq;
+            }
+          }
+        });
+        newInvoiceNumber = `${datePrefix}${String(maxSeq + 1).padStart(4, '0')}`;
+      } catch (err) {
+        console.error("Error fetching sequence, using fallback", err);
+      }
+
       const customer = customers.find(c => c.id === customerId);
       const batch = writeBatch(db);
       const saleRef = doc(collection(db, 'sales'));
 
       const saleData: any = {
+        invoiceNumber: newInvoiceNumber,
         customerName: customer?.name || 'Walk-in Customer',
         totalAmount: subtotal,
         discount,
@@ -165,27 +195,30 @@ export default function POS({ user }: { user: any }) {
       }
 
       await batch.commit();
+      setLastInvoiceNumber(newInvoiceNumber);
       toast.success("Sale completed successfully");
       
-      // Trigger print
-      if (printType === 'thermal') {
-        handlePrintThermal();
-      } else {
-        handlePrintA4();
-      }
-      
-      // Reset after a short delay to allow print capture
-      setTimeout(async () => {
-        setCart([]);
-        setCustomerId('');
-        setDiscount(0);
-        setAmountPaid('');
-        setSearch('');
+      // Delay slightly so state updates print component
+      setTimeout(() => {
+        if (printType === 'thermal') {
+          handlePrintThermal();
+        } else {
+          handlePrintA4();
+        }
         
-        // Refresh products to get updated stock
-        const productsSnap = await getDocs(collection(db, 'products'));
-        setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      }, 500);
+        // Reset after a short delay to allow print capture
+        setTimeout(async () => {
+          setCart([]);
+          setCustomerId('');
+          setDiscount(0);
+          setAmountPaid('');
+          setSearch('');
+          
+          // Refresh products to get updated stock
+          const productsSnap = await getDocs(collection(db, 'products'));
+          setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }, 500);
+      }, 100);
 
     } catch (error: any) {
       console.error("Checkout error:", error);
@@ -345,53 +378,89 @@ export default function POS({ user }: { user: any }) {
       {/* Hidden Receipts for Printing */}
       <div className="hidden">
         {/* Thermal Receipt */}
-        <div ref={thermalReceiptRef} className="p-4 w-[80mm] text-sm font-mono bg-white text-black">
+        <div ref={thermalReceiptRef} className="p-4 w-[80mm] text-black font-sans bg-white">
           <div className="text-center mb-4">
-            <h2 className="font-bold text-xl">{settings.storeName}</h2>
-            <p>{settings.address}</p>
-            <p>Tel: {settings.phone}</p>
-            <p>{new Date().toLocaleString()}</p>
+            <h1 className="font-bold text-2xl uppercase tracking-wider">{settings.storeName}</h1>
+            <p className="text-xs text-gray-600 mt-1">{settings.address}</p>
+            <p className="text-xs text-gray-600">Tel: {settings.phone}</p>
           </div>
-          <div className="mb-2 border-b border-dashed pb-2">
-            <p>Customer: {customerName}</p>
-            {selectedCustomer?.phone && <p>Tel: {selectedCustomer.phone}</p>}
-          </div>
-          <div className="border-b border-dashed py-2 mb-2">
-            <div className="flex justify-between font-bold">
-              <span>Item</span>
-              <span>Total</span>
+          
+          <div className="border-y border-dashed border-gray-400 py-2 mb-3 text-xs">
+            <div className="flex justify-between mb-1">
+              <span className="text-gray-500">Date:</span>
+              <span className="font-medium">{new Date().toLocaleString()}</span>
             </div>
-          </div>
-          {cart.map((item, i) => (
-            <div key={i} className="mb-2">
-              <div>{item.productName}</div>
-              <div className="flex justify-between text-xs">
-                <span>{item.quantity} x {settings.currency}{item.salePrice.toFixed(2)}</span>
-                <span>{settings.currency}{item.total.toFixed(2)}</span>
-              </div>
+            {lastInvoiceNumber && (
+            <div className="flex justify-between mb-1">
+              <span className="text-gray-500">Invoice No:</span>
+              <span className="font-bold">{lastInvoiceNumber}</span>
             </div>
-          ))}
-          <div className="border-t border-dashed pt-2 mt-2">
+            )}
             <div className="flex justify-between">
+              <span className="text-gray-500">Customer:</span>
+              <span className="font-medium">{customerName}</span>
+            </div>
+          </div>
+
+          <table className="w-full text-sm mb-3">
+            <thead>
+              <tr className="border-b border-gray-800 text-xs text-gray-600 uppercase tracking-wider">
+                <th className="py-2 text-left w-3/5">Item</th>
+                <th className="py-2 text-right">Qty</th>
+                <th className="py-2 text-right">Rate</th>
+                <th className="py-2 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody className="align-top">
+              {cart.map((item, i) => (
+                <tr key={i} className="border-b border-gray-100 last:border-0 border-dashed">
+                  <td className="py-2 pr-2">
+                    <div className="font-bold text-gray-800 leading-tight">{item.productName}</div>
+                  </td>
+                  <td className="py-2 text-right text-gray-600">{item.quantity}</td>
+                  <td className="py-2 text-right text-gray-600">{Math.round(item.salePrice)}</td>
+                  <td className="py-2 text-right font-bold">{Math.round(item.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border-t border-gray-800 pt-2 mb-4 space-y-1 text-sm bg-gray-50/50 p-2 rounded-md">
+            <div className="flex justify-between items-center text-gray-600">
               <span>Subtotal:</span>
               <span>{settings.currency}{subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Discount:</span>
-              <span>{settings.currency}{discount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
+            {discount > 0 && (
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Discount:</span>
+                <span>-{settings.currency}{discount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center text-gray-600">
               <span>Tax ({settings.taxRate}%):</span>
               <span>{settings.currency}{taxAmount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between font-bold text-lg mt-2">
+            <div className="flex justify-between items-center font-bold text-lg pt-1 border-t border-gray-300 mt-1">
               <span>Total:</span>
               <span>{settings.currency}{finalAmount.toFixed(2)}</span>
             </div>
+            {amountPaid !== '' && (
+              <div className="flex justify-between items-center text-gray-600 mt-2">
+                <span>Amount Paid:</span>
+                <span>{settings.currency}{Number(amountPaid).toFixed(2)}</span>
+              </div>
+            )}
+            {balance > 0 && (
+              <div className="flex justify-between items-center text-red-600">
+                <span>Balance:</span>
+                <span>{settings.currency}{balance.toFixed(2)}</span>
+              </div>
+            )}
           </div>
-          <div className="text-center mt-6">
-            <p>Thank you for your visit!</p>
-            <p>Get well soon.</p>
+
+          <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-400">
+            <p className="font-medium text-gray-800 text-sm">Thank you for your visit!</p>
+            <p className="text-xs text-gray-500 mt-1">Get well soon.</p>
           </div>
         </div>
 
@@ -405,6 +474,7 @@ export default function POS({ user }: { user: any }) {
             </div>
             <div className="text-right">
               <h2 className="text-3xl font-bold text-gray-800 mb-2">INVOICE</h2>
+              {lastInvoiceNumber && <p className="text-gray-600 font-medium">Invoice #: {lastInvoiceNumber}</p>}
               <p className="text-gray-600">Date: {new Date().toLocaleDateString()}</p>
               <p className="text-gray-600">Time: {new Date().toLocaleTimeString()}</p>
             </div>
@@ -462,9 +532,13 @@ export default function POS({ user }: { user: any }) {
             </div>
           </div>
           
-          <div className="mt-20 pt-8 border-t border-gray-200 text-center text-gray-500">
-            <p className="font-medium text-gray-600 mb-1">Thank you for your business!</p>
-            <p className="text-sm">If you have any questions about this invoice, please contact us.</p>
+          <div className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-800">
+            <p className="mb-2 font-semibold">I Muhammad Saqib a person resident in Pakistan Carrying on bussiness at 1-282. Street # 4Mohallah Qutb-u-Din Committee Chowk Rawalpindi Under the name of Israh Distributors Do here by give this warranty the drug described as sold in this invoice do not contravense in any way the provision of section 23 of the Drug Act 1976.</p>
+            <p className="font-semibold">NOTE (1)Herbal/natural/Nutrinational/Surgical /Food item are not covered under this warranty</p>
+            <p className="mb-8 font-semibold">(2)For dated items we must be informed six months prior to expiry (3)(*)Marked item are not covered under this warranty (4)This Warranty is suspended /cancelled in cause of your license is expired</p>
+            <div className="text-right mt-12 font-bold text-lg">
+              For Israh Distributors
+            </div>
           </div>
         </div>
       </div>

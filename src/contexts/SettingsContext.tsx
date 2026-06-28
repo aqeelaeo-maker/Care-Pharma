@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '../firebase';
 
 interface StoreSettings {
   storeName: string;
@@ -9,6 +10,7 @@ interface StoreSettings {
   taxRate: number;
   currency: string;
   minimumStockLimit: number;
+  authorizedEmails?: string;
 }
 
 const defaultSettings: StoreSettings = {
@@ -17,7 +19,8 @@ const defaultSettings: StoreSettings = {
   phone: '+1 234 567 890',
   taxRate: 5,
   currency: '$',
-  minimumStockLimit: 10
+  minimumStockLimit: 10,
+  authorizedEmails: ''
 };
 
 const SettingsContext = createContext<StoreSettings>(defaultSettings);
@@ -28,12 +31,32 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [settings, setSettings] = useState<StoreSettings>(defaultSettings);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
-      if (docSnap.exists()) {
-        setSettings({ ...defaultSettings, ...docSnap.data() } as StoreSettings);
+    let unsubSnapshot: (() => void) | undefined;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubSnapshot = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
+          if (docSnap.exists()) {
+            setSettings({ ...defaultSettings, ...docSnap.data() } as StoreSettings);
+          }
+        }, (error) => {
+          console.error("Error fetching settings:", error);
+        });
+      } else {
+        if (unsubSnapshot) {
+          unsubSnapshot();
+          unsubSnapshot = undefined;
+        }
+        setSettings(defaultSettings);
       }
     });
-    return () => unsub();
+
+    return () => {
+      unsubAuth();
+      if (unsubSnapshot) {
+        unsubSnapshot();
+      }
+    };
   }, []);
 
   return (

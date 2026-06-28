@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,19 @@ export default function Login() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      // Check if user is authorized
+      const storeSettingsDoc = await getDoc(doc(db, 'settings', 'store'));
+      if (storeSettingsDoc.exists()) {
+        const data = storeSettingsDoc.data();
+        if (data.authorizedEmails && data.authorizedEmails.trim() !== '') {
+          const allowedEmails = data.authorizedEmails.split(',').map((e: string) => e.trim().toLowerCase());
+          if (user.email && !allowedEmails.includes(user.email.toLowerCase())) {
+            await signOut(auth);
+            throw new Error("Your email is not authorized to access this application.");
+          }
+        }
+      }
+
       // Check if user exists in Firestore
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
@@ -30,7 +43,7 @@ export default function Login() {
         await setDoc(userRef, {
           uid: user.uid,
           name: user.displayName || 'Unknown',
-          email: user.email,
+          email: user.email || '',
           role: 'Staff',
           createdAt: new Date().toISOString()
         });

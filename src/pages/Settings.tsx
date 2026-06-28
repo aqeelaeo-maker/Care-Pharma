@@ -18,7 +18,8 @@ export default function Settings() {
     phone: '+1 234 567 890',
     taxRate: 5,
     currency: '$',
-    minimumStockLimit: 10
+    minimumStockLimit: 10,
+    authorizedEmails: ''
   });
 
   useEffect(() => {
@@ -88,6 +89,10 @@ export default function Settings() {
             <div className="space-y-2 col-span-2">
               <Label>Address</Label>
               <Input name="address" value={storeSettings.address} onChange={handleStoreSettingsChange} />
+            </div>
+            <div className="space-y-2 col-span-2">
+              <Label>Authorized Emails (comma-separated, empty to allow all)</Label>
+              <Input name="authorizedEmails" placeholder="e.g. admin@example.com, staff@example.com" value={storeSettings.authorizedEmails || ''} onChange={handleStoreSettingsChange} />
             </div>
             <div className="space-y-2">
               <Label>Tax Rate (%)</Label>
