@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, getDocs, doc, getDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, doc, getDoc, writeBatch, query, orderBy, limit } from 'firebase/firestore';
+import { db, getStoreCollection, getStoreDoc } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,8 +29,8 @@ export default function POS({ user }: { user: any }) {
     const fetchData = async () => {
       try {
         const [productsSnap, customersSnap] = await Promise.all([
-          getDocs(collection(db, 'products')),
-          getDocs(collection(db, 'customers'))
+          getDocs(getStoreCollection('products')),
+          getDocs(getStoreCollection('customers'))
         ]);
         setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setCustomers(customersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -123,7 +123,7 @@ export default function POS({ user }: { user: any }) {
       
       // We will try to find the latest invoice for today to determine the next sequence number
       try {
-        const salesQuery = query(collection(db, 'sales'), orderBy('date', 'desc'), limit(10));
+        const salesQuery = query(getStoreCollection('sales'), orderBy('date', 'desc'), limit(10));
         const salesSnap = await getDocs(salesQuery);
         let maxSeq = 0;
         salesSnap.forEach((dsnap) => {
@@ -142,7 +142,7 @@ export default function POS({ user }: { user: any }) {
 
       const customer = customers.find(c => c.id === customerId);
       const batch = writeBatch(db);
-      const saleRef = doc(collection(db, 'sales'));
+      const saleRef = getStoreDoc('sales');
 
       const saleData: any = {
         invoiceNumber: newInvoiceNumber,
@@ -162,7 +162,7 @@ export default function POS({ user }: { user: any }) {
       if (customer?.id) {
         saleData.customerId = customer.id;
         if (balance > 0) {
-          const customerRef = doc(db, 'customers', customer.id);
+          const customerRef = getStoreDoc('customers', customer.id);
           batch.update(customerRef, {
             loanAmount: (customer.loanAmount || 0) + balance
           });
@@ -173,7 +173,7 @@ export default function POS({ user }: { user: any }) {
 
       // Update stock and logs
       for (const item of cart) {
-        const productRef = doc(db, 'products', item.productId);
+        const productRef = getStoreDoc('products', item.productId);
         const productSnap = await getDoc(productRef);
         if (productSnap.exists()) {
           const currentQty = productSnap.data().quantity;
@@ -182,7 +182,7 @@ export default function POS({ user }: { user: any }) {
             updatedAt: new Date().toISOString()
           });
 
-          const logRef = doc(collection(db, 'stockLogs'));
+          const logRef = getStoreDoc('stockLogs');
           batch.set(logRef, {
             productId: item.productId,
             productName: item.productName,
@@ -215,7 +215,7 @@ export default function POS({ user }: { user: any }) {
           setSearch('');
           
           // Refresh products to get updated stock
-          const productsSnap = await getDocs(collection(db, 'products'));
+          const productsSnap = await getDocs(getStoreCollection('products'));
           setProducts(productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         }, 500);
       }, 100);

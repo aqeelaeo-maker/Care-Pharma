@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db, getStoreCollection, getStoreDoc } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,7 +21,7 @@ export default function Customers() {
 
   const fetchCustomers = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'customers'));
+      const querySnapshot = await getDocs(getStoreCollection('customers'));
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCustomers(data);
     } catch (error) {
@@ -48,10 +48,10 @@ export default function Customers() {
     e.preventDefault();
     try {
       if (editingCustomer) {
-        await updateDoc(doc(db, 'customers', editingCustomer.id), formData);
+        await updateDoc(getStoreDoc('customers', editingCustomer.id), formData);
         toast.success("Customer updated successfully");
       } else {
-        await addDoc(collection(db, 'customers'), { ...formData, createdAt: new Date().toISOString() });
+        await addDoc(getStoreCollection('customers'), { ...formData, createdAt: new Date().toISOString() });
         toast.success("Customer added successfully");
       }
       setIsDialogOpen(false);
@@ -71,7 +71,7 @@ export default function Customers() {
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this customer?")) {
       try {
-        await deleteDoc(doc(db, 'customers', id));
+        await deleteDoc(getStoreDoc('customers', id));
         toast.success("Customer deleted successfully");
         fetchCustomers();
       } catch (error: any) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db, getStoreCollection, getStoreDoc } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,7 +23,7 @@ export default function Products() {
 
   const fetchProducts = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'products'));
+      const querySnapshot = await getDocs(getStoreCollection('products'));
       const productsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setProducts(productsData);
     } catch (error) {
@@ -55,7 +55,7 @@ export default function Products() {
       };
 
       if (editingProduct) {
-        await updateDoc(doc(db, 'products', editingProduct.id), productData);
+        await updateDoc(getStoreDoc('products', editingProduct.id), productData);
         toast.success("Product updated successfully");
       } else {
         const newProductData = {
@@ -68,7 +68,7 @@ export default function Products() {
           barcode: '',
           createdAt: new Date().toISOString()
         };
-        await addDoc(collection(db, 'products'), newProductData);
+        await addDoc(getStoreCollection('products'), newProductData);
         toast.success("Product added successfully");
       }
       
@@ -92,7 +92,7 @@ export default function Products() {
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
-        await deleteDoc(doc(db, 'products', id));
+        await deleteDoc(getStoreDoc('products', id));
         toast.success("Product deleted successfully");
         fetchProducts();
       } catch (error: any) {

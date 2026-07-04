@@ -32,12 +32,15 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (!firebaseUser.email) {
+            setUser({ ...firebaseUser, role: 'Staff' });
+            return;
+          }
+          const userDoc = await getDoc(doc(db, 'stores', firebaseUser.email.toLowerCase(), 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             setUser({ ...firebaseUser, role: userDoc.data().role });
           } else {
-            // Default role for new users
-            setUser({ ...firebaseUser, role: 'Staff' });
+            setUser({ ...firebaseUser, role: 'Admin' });
           }
         } catch (error) {
           console.error("Error fetching user role:", error);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db, getStoreCollection, getStoreDoc } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -42,7 +42,7 @@ export default function Stock() {
 
   const fetchProducts = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'products'));
+      const querySnapshot = await getDocs(getStoreCollection('products'));
       const productsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -79,7 +79,7 @@ export default function Stock() {
     }
     try {
       const product = products.find(p => p.id === addStockForm.productId);
-      const productRef = doc(db, 'products', addStockForm.productId);
+      const productRef = getStoreDoc('products', addStockForm.productId);
       
       const newQuantity = (product.quantity || 0) + Number(addStockForm.quantityToAdd);
 
@@ -125,7 +125,7 @@ export default function Stock() {
 
   const handleSave = async (id: string) => {
     try {
-      const productRef = doc(db, 'products', id);
+      const productRef = getStoreDoc('products', id);
       await updateDoc(productRef, {
         purchasePrice: Number(editForm.purchasePrice),
         salePrice: Number(editForm.salePrice),

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { db, auth, getStoreCollection, getStoreDoc } from '../firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,19 +18,30 @@ export default function Settings() {
     phone: '+1 234 567 890',
     taxRate: 5,
     currency: '$',
-    minimumStockLimit: 10,
-    authorizedEmails: ''
+    minimumStockLimit: 10
   });
+  
+  const [globalAuthorizedEmails, setGlobalAuthorizedEmails] = useState('');
+
+  const currentUser = auth.currentUser;
+  const isSuperAdmin = currentUser?.email === 'aqeelaeo@gmail.com';
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const usersSnap = await getDocs(collection(db, 'users'));
+        const usersSnap = await getDocs(getStoreCollection('users'));
         setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-        const settingsDoc = await getDoc(doc(db, 'settings', 'store'));
+        const settingsDoc = await getDoc(getStoreDoc('settings', 'store'));
         if (settingsDoc.exists()) {
           setStoreSettings(settingsDoc.data() as any);
+        }
+
+        if (isSuperAdmin) {
+          const globalDoc = await getDoc(doc(db, 'settings', 'global'));
+          if (globalDoc.exists()) {
+            setGlobalAuthorizedEmails(globalDoc.data()?.authorizedEmails || '');
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -39,11 +50,11 @@ export default function Settings() {
       }
     };
     fetchData();
-  }, []);
+  }, [isSuperAdmin]);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      await updateDoc(doc(db, 'users', userId), { role: newRole });
+      await updateDoc(getStoreDoc('users', userId), { role: newRole });
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
       toast.success("User role updated");
     } catch (error: any) {
@@ -61,16 +72,49 @@ export default function Settings() {
 
   const saveStoreSettings = async () => {
     try {
-      await setDoc(doc(db, 'settings', 'store'), storeSettings);
+      await setDoc(getStoreDoc('settings', 'store'), storeSettings);
       toast.success("Store settings saved");
     } catch (error: any) {
       toast.error(error.message || "Failed to save settings");
     }
   };
 
+  const saveGlobalSettings = async () => {
+    try {
+      await setDoc(doc(db, 'settings', 'global'), { authorizedEmails: globalAuthorizedEmails });
+      toast.success("Global settings saved");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save global settings");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
+
+      {isSuperAdmin && (
+        <Card className="border-blue-200 shadow-sm">
+          <CardHeader className="bg-blue-50">
+            <CardTitle className="text-blue-800">Super Admin Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Authorized Emails (comma-separated)</Label>
+                <p className="text-sm text-gray-500 mb-2">Only these emails will be allowed to log in and create their own store instances.</p>
+                <Input 
+                  value={globalAuthorizedEmails} 
+                  onChange={(e) => setGlobalAuthorizedEmails(e.target.value)} 
+                  placeholder="e.g. admin@example.com, user2@example.com" 
+                />
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button onClick={saveGlobalSettings}>Save Global Settings</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -90,10 +134,6 @@ export default function Settings() {
               <Label>Address</Label>
               <Input name="address" value={storeSettings.address} onChange={handleStoreSettingsChange} />
             </div>
-            <div className="space-y-2 col-span-2">
-              <Label>Authorized Emails (comma-separated, empty to allow all)</Label>
-              <Input name="authorizedEmails" placeholder="e.g. admin@example.com, staff@example.com" value={storeSettings.authorizedEmails || ''} onChange={handleStoreSettingsChange} />
-            </div>
             <div className="space-y-2">
               <Label>Tax Rate (%)</Label>
               <Input name="taxRate" type="number" value={storeSettings.taxRate} onChange={handleStoreSettingsChange} />
@@ -107,7 +147,7 @@ export default function Settings() {
               <Input name="minimumStockLimit" type="number" value={storeSettings.minimumStockLimit} onChange={handleStoreSettingsChange} />
             </div>
             <div className="col-span-2 flex justify-end mt-4">
-              <Button onClick={saveStoreSettings}>Save Settings</Button>
+              <Button onClick={saveStoreSettings}>Save Store Settings</Button>
             </div>
           </div>
         </CardContent>
@@ -151,6 +191,11 @@ export default function Settings() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {users.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-gray-500">No staff members found.</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           )}

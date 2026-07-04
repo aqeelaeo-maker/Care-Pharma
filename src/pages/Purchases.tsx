@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, addDoc, doc, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { db, getStoreCollection, getStoreDoc } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,9 +34,9 @@ export default function Purchases() {
   const fetchData = async () => {
     try {
       const [purchasesSnap, vendorsSnap, productsSnap] = await Promise.all([
-        getDocs(collection(db, 'purchases')),
-        getDocs(collection(db, 'vendors')),
-        getDocs(collection(db, 'products'))
+        getDocs(getStoreCollection('purchases')),
+        getDocs(getStoreCollection('vendors')),
+        getDocs(getStoreCollection('products'))
       ]);
       
       setPurchases(purchasesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -104,12 +104,12 @@ export default function Purchases() {
       const batch = writeBatch(db);
 
       // Add purchase record
-      const purchaseRef = doc(collection(db, 'purchases'));
+      const purchaseRef = getStoreDoc('purchases');
       batch.set(purchaseRef, purchaseData);
 
       // Update vendor pending payment
       if (balance > 0 && formData.vendorId) {
-        const vendorRef = doc(db, 'vendors', formData.vendorId);
+        const vendorRef = getStoreDoc('vendors', formData.vendorId);
         const vendorSnap = await getDoc(vendorRef);
         if (vendorSnap.exists()) {
           batch.update(vendorRef, {
@@ -120,7 +120,7 @@ export default function Purchases() {
 
       // Update product quantities and add stock logs
       for (const item of purchaseItems) {
-        const productRef = doc(db, 'products', item.productId);
+        const productRef = getStoreDoc('products', item.productId);
         const productSnap = await getDoc(productRef);
         
         if (productSnap.exists()) {
@@ -131,7 +131,7 @@ export default function Purchases() {
           });
 
           // Add stock log
-          const logRef = doc(collection(db, 'stockLogs'));
+          const logRef = getStoreDoc('stockLogs');
           batch.set(logRef, {
             productId: item.productId,
             productName: item.productName,

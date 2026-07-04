@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db, getStoreCollection, getStoreDoc } from '../firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -114,7 +114,7 @@ export default function Sales() {
 
     try {
       const batch = writeBatch(db);
-      const saleRef = doc(db, 'sales', saleToEdit.id);
+      const saleRef = getStoreDoc('sales', saleToEdit.id);
 
       const newAmountPaid = editAmountPaid === '' ? 0 : editAmountPaid;
 
@@ -133,7 +133,7 @@ export default function Sales() {
         const diff = newQty - oldQty;
         
         if (diff !== 0) {
-          const productRef = doc(db, 'products', productId);
+          const productRef = getStoreDoc('products', productId);
           const productSnap = await getDoc(productRef);
           if (productSnap.exists()) {
             const currentStock = productSnap.data().quantity || 0;
@@ -153,7 +153,7 @@ export default function Sales() {
       });
 
       if (saleToEdit.customerId) {
-        const customerRef = doc(db, 'customers', saleToEdit.customerId);
+        const customerRef = getStoreDoc('customers', saleToEdit.customerId);
         const customerSnap = await getDoc(customerRef);
         if (customerSnap.exists()) {
           const currentLoan = customerSnap.data().loanAmount || 0;
@@ -167,7 +167,7 @@ export default function Sales() {
       setSaleToEdit(null);
       
       // Refresh sales
-      const q = query(collection(db, 'sales'), orderBy('date', 'desc'), limit(100));
+      const q = query(getStoreCollection('sales'), orderBy('date', 'desc'), limit(100));
       const querySnapshot = await getDocs(q);
       setSales(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
@@ -181,11 +181,11 @@ export default function Sales() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const q = query(collection(db, 'sales'), orderBy('date', 'desc'), limit(100));
+        const q = query(getStoreCollection('sales'), orderBy('date', 'desc'), limit(100));
         const querySnapshot = await getDocs(q);
         setSales(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-        const pQuery = query(collection(db, 'products'));
+        const pQuery = query(getStoreCollection('products'));
         const pSnapshot = await getDocs(pQuery);
         setProducts(pSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (error) {

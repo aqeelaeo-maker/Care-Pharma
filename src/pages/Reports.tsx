@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs } from 'firebase/firestore';
+import { db, getStoreCollection } from '../firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,9 +19,9 @@ export default function Reports() {
     const fetchData = async () => {
       try {
         const [salesSnap, purchasesSnap, productsSnap] = await Promise.all([
-          getDocs(collection(db, 'sales')),
-          getDocs(collection(db, 'purchases')),
-          getDocs(collection(db, 'products'))
+          getDocs(getStoreCollection('sales')),
+          getDocs(getStoreCollection('purchases')),
+          getDocs(getStoreCollection('products'))
         ]);
         
         setSales(salesSnap.docs.map(doc => doc.data()));

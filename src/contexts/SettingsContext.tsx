@@ -34,10 +34,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let unsubSnapshot: (() => void) | undefined;
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        unsubSnapshot = onSnapshot(doc(db, 'settings', 'store'), (docSnap) => {
+      if (user && user.email) {
+        unsubSnapshot = onSnapshot(doc(db, 'stores', user.email.toLowerCase(), 'settings', 'store'), (docSnap) => {
           if (docSnap.exists()) {
             setSettings({ ...defaultSettings, ...docSnap.data() } as StoreSettings);
+          } else {
+            setSettings(defaultSettings);
           }
         }, (error) => {
           console.error("Error fetching settings:", error);

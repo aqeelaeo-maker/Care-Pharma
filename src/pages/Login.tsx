@@ -21,30 +21,38 @@ export default function Login() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      if (!user.email) {
+        await signOut(auth);
+        throw new Error("Your account does not have an email associated with it.");
+      }
+
       // Check if user is authorized
-      const storeSettingsDoc = await getDoc(doc(db, 'settings', 'store'));
-      if (storeSettingsDoc.exists()) {
-        const data = storeSettingsDoc.data();
-        if (data.authorizedEmails && data.authorizedEmails.trim() !== '') {
-          const allowedEmails = data.authorizedEmails.split(',').map((e: string) => e.trim().toLowerCase());
-          if (user.email && !allowedEmails.includes(user.email.toLowerCase())) {
+      if (user.email.toLowerCase() !== "aqeelaeo@gmail.com") {
+        const globalSettingsDoc = await getDoc(doc(db, 'settings', 'global'));
+        if (globalSettingsDoc.exists()) {
+          const data = globalSettingsDoc.data();
+          const allowedEmails = data.authorizedEmails ? data.authorizedEmails.split(',').map((e: string) => e.trim().toLowerCase()) : [];
+          if (!allowedEmails.includes(user.email.toLowerCase())) {
             await signOut(auth);
             throw new Error("Your email is not authorized to access this application.");
           }
+        } else {
+          await signOut(auth);
+          throw new Error("Application not configured. Please contact admin.");
         }
       }
 
-      // Check if user exists in Firestore
-      const userRef = doc(db, 'users', user.uid);
+      // Check if user exists in their own store's users collection
+      const userRef = doc(db, 'stores', user.email!.toLowerCase(), 'users', user.uid);
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
-        // Create new user with default 'Staff' role
+        // Create new user with default 'Admin' role as they own the store
         await setDoc(userRef, {
           uid: user.uid,
           name: user.displayName || 'Unknown',
           email: user.email || '',
-          role: 'Staff',
+          role: 'Admin',
           createdAt: new Date().toISOString()
         });
       }

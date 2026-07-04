@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db, getStoreCollection, getStoreDoc } from '../firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,7 +21,7 @@ export default function Vendors() {
 
   const fetchVendors = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'vendors'));
+      const querySnapshot = await getDocs(getStoreCollection('vendors'));
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setVendors(data);
     } catch (error) {
@@ -48,10 +48,10 @@ export default function Vendors() {
     e.preventDefault();
     try {
       if (editingVendor) {
-        await updateDoc(doc(db, 'vendors', editingVendor.id), formData);
+        await updateDoc(getStoreDoc('vendors', editingVendor.id), formData);
         toast.success("Vendor updated successfully");
       } else {
-        await addDoc(collection(db, 'vendors'), { ...formData, createdAt: new Date().toISOString() });
+        await addDoc(getStoreCollection('vendors'), { ...formData, createdAt: new Date().toISOString() });
         toast.success("Vendor added successfully");
       }
       setIsDialogOpen(false);
@@ -71,7 +71,7 @@ export default function Vendors() {
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this vendor?")) {
       try {
-        await deleteDoc(doc(db, 'vendors', id));
+        await deleteDoc(getStoreDoc('vendors', id));
         toast.success("Vendor deleted successfully");
         fetchVendors();
       } catch (error: any) {

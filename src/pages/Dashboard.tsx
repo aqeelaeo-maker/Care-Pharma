@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, getDocs, query, where, doc } from 'firebase/firestore';
+import { db, getStoreCollection } from '../firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, DollarSign, AlertTriangle, TrendingUp, Users, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -27,7 +27,7 @@ export default function Dashboard() {
     const fetchStats = async () => {
       try {
         // Fetch products
-        const productsSnap = await getDocs(collection(db, 'products'));
+        const productsSnap = await getDocs(getStoreCollection('products'));
         const productsData: any[] = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setProducts(productsData);
         
@@ -47,7 +47,7 @@ export default function Dashboard() {
         // Fetch today's sales
         const todayStr = today.toISOString().split('T')[0];
         const salesQuery = query(
-          collection(db, 'sales'),
+          getStoreCollection('sales'),
           where('date', '>=', todayStr + 'T00:00:00.000Z'),
           where('date', '<=', todayStr + 'T23:59:59.999Z')
         );
@@ -55,11 +55,11 @@ export default function Dashboard() {
         const salesToday = salesSnap.docs.reduce((acc, doc) => acc + doc.data().finalAmount, 0);
 
         // Fetch customers loan
-        const customersSnap = await getDocs(collection(db, 'customers'));
+        const customersSnap = await getDocs(getStoreCollection('customers'));
         const totalCustomerLoan = customersSnap.docs.reduce((acc, doc) => acc + (doc.data().loanAmount || 0), 0);
 
         // Fetch vendors pending
-        const vendorsSnap = await getDocs(collection(db, 'vendors'));
+        const vendorsSnap = await getDocs(getStoreCollection('vendors'));
         const totalVendorPending = vendorsSnap.docs.reduce((acc, doc) => acc + (doc.data().pendingPayment || 0), 0);
 
         setStats({
